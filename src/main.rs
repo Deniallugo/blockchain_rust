@@ -8,11 +8,15 @@ use blockchain::blockchain::Blockchain;
 struct Cli {
     command: String,
     #[structopt(default_value = "test")]
-    value: String,
+    from: String,
+    #[structopt(default_value = "test")]
+    to: String,
+    #[structopt(default_value = "0")]
+    amount: u64,
 }
 
 fn main() {
-    let mut bc = match Blockchain::new("block".to_owned()) {
+    let mut bc = match Blockchain::new("block".to_owned(), "Ivan".to_string()) {
         Ok(ch) => ch,
         Err(e) => {
             println!("{:?}", e);
@@ -21,8 +25,9 @@ fn main() {
     };
     let args = Cli::from_args();
     match args.command.as_ref() {
-        "add_block" => {
-            match bc.add_block(args.value) {
+        "send" => {
+            let tx = bc.new_utxo_transaction(args.from, args.to, args.amount).unwrap();
+            match bc.mine_block(vec![tx]) {
                 Ok(_) => println!("Block successfully add"),
                 Err(e) => println!("{}", e)
             }
@@ -32,37 +37,10 @@ fn main() {
                 println!("{}", block);
             }
         }
+        "get_balance" => {
+            println!("Balance of {} is {}", &args.from, bc.get_balance(&args.from));
+        }
+
         _ => panic!("Wrong command")
     }
 }
-
-//fn main() {
-//    let mut bc = match Blockchain::new("block".to_owned()) {
-//        Ok(ch) => ch,
-//        Err(e) => {
-//            println!("{:?}", e);
-//            return;
-//        }
-//    };
-//
-//}
-//
-
-//use rkv::{Manager, StoreOptions, Rkv, Value};
-//use std::fs;
-//use std::path::Path;
-//
-//fn main() {
-//    let path = Path::new("block");
-//
-//    fs::create_dir_all(path).unwrap();
-//
-//    let created_arc = Manager::singleton().write().unwrap().get_or_create(path, Rkv::new).unwrap();
-//    let env = created_arc.read().unwrap();
-//    let store = env.open_single("store", StoreOptions::create()).unwrap();
-//
-//    let mut writer = env.write().unwrap();
-//    let mut reader = env.read().unwrap();
-//    store.get(&reader, "l").unwrap();
-//
-//}
