@@ -1,0 +1,15 @@
+[package]
+name = "blockchain"
+version = "0.1.0"
+authors = ["Danil Lugovskoy <deniallugo@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+rust-crypto="0.2.36"
+num-bigint="0.2.2"
+rkv = "0.9.4"
+tempfile = "3.0.7"
+serde_derive = "1.0.34"
+bincode = "1.0.0"
+serde = "1.0.34"
+structopt = "0.2"
