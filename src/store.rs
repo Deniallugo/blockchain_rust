@@ -1,7 +1,8 @@
+use std::fs;
 use std::path::Path;
 use std::sync::{Arc, RwLock, RwLockReadGuard};
-use std::fs;
-use rkv::{Manager, SingleStore, StoreOptions, Rkv};
+
+use rkv::{Manager, Rkv, SingleStore, StoreOptions};
 
 #[derive(Clone)]
 pub(crate) struct Store {
@@ -26,7 +27,7 @@ impl Store {
 
     pub(crate) fn single_store(&self) -> SingleStore {
         let rkv = self.rkv();
-        rkv.open_single("test", StoreOptions::create()).unwrap()
+        rkv.open_single(self.name.as_str(), StoreOptions::create()).unwrap()
     }
 }
 

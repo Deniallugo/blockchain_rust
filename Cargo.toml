@@ -14,3 +14,9 @@ bincode = "1.0.0"
 serde = "1.0.34"
 structopt = "0.2"
 rustc-serialize = "0.3.24"
+rand = "0.6.5"
+secp256k1 = {version = "0.13.0", features=["rand"]}
+ripemd160 = "0.8.0"
+bs58 = "0.2.2"
+serde-big-array = "0.1.5"
+

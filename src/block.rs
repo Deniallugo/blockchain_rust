@@ -85,7 +85,6 @@ impl fmt::Display for Block {
                self.hash.to_hex(),
                self.prev_block_hash.to_hex(),
                self.timestamp,
-//               String::from_utf8_lossy(&self.data),
                self.nonce)
     }
 }
