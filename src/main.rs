@@ -23,19 +23,14 @@ enum Cli {
     #[structopt(name = "send")]
     Send(Send),
     #[structopt(name = "coinbase")]
-    Coinbase {
-        to: String,
-    },
+    Coinbase { to: String },
     #[structopt(name = "balance")]
-    Balance {
-        of: String,
-    },
+    Balance { of: String },
     #[structopt(name = "address")]
     Address,
     #[structopt(name = "printchain")]
     Print,
 }
-
 
 fn main() {
     let mut wallets = Wallets::new("wallets".to_owned());
@@ -56,12 +51,12 @@ fn main() {
         Cli::Send(cmd) => {
             let wallet = match wallets.get(&cmd.from) {
                 Some(t) => t,
-                None => panic!("Wallet not find")
+                None => panic!("Wallet not find"),
             };
             let tx = bc.new_utxo_transaction(wallet, cmd.to, cmd.amount).unwrap();
             match bc.mine_block(vec![tx]) {
                 Ok(_) => println!("Block successfully add"),
-                Err(e) => println!("{}", e)
+                Err(e) => println!("{}", e),
             }
         }
         Cli::Coinbase { to } => {
@@ -72,7 +67,7 @@ fn main() {
             let tx = Transaction::new_coinbase_tx(&to, "".to_string());
             match bc.mine_block(vec![tx]) {
                 Ok(_) => println!("Block successfully add"),
-                Err(e) => println!("{}", e)
+                Err(e) => println!("{}", e),
             }
         }
         Cli::Print => {

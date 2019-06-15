@@ -19,7 +19,10 @@ pub struct Blockchain {
 }
 
 impl Blockchain {
-    pub fn new(path_str: String, mut wallets: &mut Wallets) -> Result<(Blockchain, Option<String>), MiningError> {
+    pub fn new(
+        path_str: String,
+        mut wallets: &mut Wallets,
+    ) -> Result<(Blockchain, Option<String>), MiningError> {
         let store = Store::new(&path_str, "block".to_owned());
         let env = store.rkv();
         let single_store = store.single_store();
@@ -41,26 +44,36 @@ impl Blockchain {
                     let mut wallet = wallets.create_wallet();
                     let wallet_address = wallet.get_address();
                     let coinbase_transaction =
-                        Transaction::new_coinbase_tx(&wallet_address,
-                                                     "genesis block".to_string());
+                        Transaction::new_coinbase_tx(&wallet_address, "genesis block".to_string());
                     gen_block = Block::genesis_block(coinbase_transaction)?;
                     address = Some(wallet_address);
                     let mut writer = env.write().unwrap();
-                    single_store.put(&mut writer, &gen_block.hash, &Value::Blob(&gen_block.serialize())).unwrap();
-                    single_store.put(&mut writer, "l", &Value::Blob(&gen_block.hash)).unwrap();
+                    single_store
+                        .put(
+                            &mut writer,
+                            &gen_block.hash,
+                            &Value::Blob(&gen_block.serialize()),
+                        )
+                        .unwrap();
+                    single_store
+                        .put(&mut writer, "l", &Value::Blob(&gen_block.hash))
+                        .unwrap();
                     writer.commit().unwrap();
                     gen_block.hash
                 }
-            }
+            },
             Err(e) => {
                 panic!("{}", e);
             }
         };
-        Ok((Blockchain {
-            store: Store::clone(&store),
-            path: path_str,
-            tip: Some(tip),
-        }, address))
+        Ok((
+            Blockchain {
+                store: Store::clone(&store),
+                path: path_str,
+                tip: Some(tip),
+            },
+            address,
+        ))
     }
 
     pub fn verify_transaction(&self, tx: &Transaction) -> bool {
@@ -70,8 +83,10 @@ impl Blockchain {
         let mut prev_txs: HashMap<String, Transaction> = Default::default();
         for vin in tx.vin.iter() {
             let borrow_vin = vin.borrow();
-            prev_txs.insert(borrow_vin.tx_id.to_hex(),
-                            self.find_transaction(&borrow_vin.tx_id));
+            prev_txs.insert(
+                borrow_vin.tx_id.to_hex(),
+                self.find_transaction(&borrow_vin.tx_id),
+            );
         }
         tx.verify(prev_txs)
     }
@@ -101,8 +116,12 @@ impl Blockchain {
             Some(hash) => {
                 block = Block::new(transactions, hash)?;
                 let mut writer = rkv.write().unwrap();
-                single_store.put(&mut writer, &block.hash, &Value::Blob(&block.serialize())).unwrap();
-                single_store.put(&mut writer, "l", &Value::Blob(&block.hash)).unwrap();
+                single_store
+                    .put(&mut writer, &block.hash, &Value::Blob(&block.serialize()))
+                    .unwrap();
+                single_store
+                    .put(&mut writer, "l", &Value::Blob(&block.hash))
+                    .unwrap();
                 writer.commit().unwrap();
             }
             None => {
@@ -122,10 +141,12 @@ impl Blockchain {
                     match spent_txs.get(&tx_id) {
                         Some(spent_outs) => {
                             for val in spent_outs {
-                                if *val == out_idx as i64 { continue 'outs; }
+                                if *val == out_idx as i64 {
+                                    continue 'outs;
+                                }
                             }
                         }
-                        None => ()
+                        None => (),
                     }
 
                     if out.is_locker_with_key(pub_key_hash) {
@@ -139,7 +160,9 @@ impl Blockchain {
 
                                 match spent_txs.get_mut(&in_tx_id) {
                                     Some(vec) => vec.push(ref_vin.vout),
-                                    None => { spent_txs.insert(in_tx_id, vec![ref_vin.vout]); }
+                                    None => {
+                                        spent_txs.insert(in_tx_id, vec![ref_vin.vout]);
+                                    }
                                 }
                             }
                         }
@@ -173,7 +196,12 @@ impl Blockchain {
         }
         balance
     }
-    pub fn new_utxo_transaction(&self, from: &Wallet, to: String, amount: u64) -> Result<Transaction, TransactionError> {
+    pub fn new_utxo_transaction(
+        &self,
+        from: &Wallet,
+        to: String,
+        amount: u64,
+    ) -> Result<Transaction, TransactionError> {
         let mut inputs: Vec<RefCell<TXInput>> = vec![];
         let mut outputs: Vec<TXOutput> = vec![];
         let (acc, valid_outs) = self.find_spendable_outs(from.clone(), amount);
@@ -210,8 +238,10 @@ impl Blockchain {
         let mut prev_txs: HashMap<String, Transaction> = Default::default();
         for vin in tx.vin.iter() {
             let borrow_vin = vin.borrow();
-            prev_txs.insert(borrow_vin.tx_id.to_hex(),
-                            self.find_transaction(&borrow_vin.tx_id));
+            prev_txs.insert(
+                borrow_vin.tx_id.to_hex(),
+                self.find_transaction(&borrow_vin.tx_id),
+            );
         }
         tx.sign(priv_key, prev_txs).unwrap()
     }
@@ -228,7 +258,9 @@ impl Blockchain {
                     acc += out.value;
                     match unspent_outs.get_mut(&tx_id) {
                         Some(vec) => vec.push(id as i64),
-                        None => { unspent_outs.insert(tx_id.clone(), vec![id as i64]); }
+                        None => {
+                            unspent_outs.insert(tx_id.clone(), vec![id as i64]);
+                        }
                     }
                     if acc >= amount {
                         break 'work;
@@ -243,7 +275,6 @@ impl Blockchain {
         self.into_iter()
     }
 }
-
 
 impl IntoIterator for Blockchain {
     type Item = Block;
@@ -267,7 +298,6 @@ impl IntoIterator for &Blockchain {
     }
 }
 
-
 pub struct BlockchainIterator {
     store: Store,
     current_hash: Option<Sha256Hash>,
@@ -280,23 +310,21 @@ impl Iterator for BlockchainIterator {
         let rkv = self.store.rkv();
         let reader = rkv.read().unwrap();
         let single_store = self.store.single_store();
-
-        match self.current_hash {
-            None => None,
-            Some(hash) => {
-                match single_store.get(&reader, hash).unwrap() {
-                    None => None,
-                    Some(l) => {
-                        if let Value::Blob(val) = l {
-                            let block = Block::from_bytes(&val.to_vec()).unwrap();
-                            self.current_hash = Some(block.prev_block_hash);
-                            Some(block)
-                        } else {
-                            panic!("Wrong format")
-                        }
+        if let Some(ref hash) = self.current_hash {
+            match single_store.get(&reader, hash).unwrap() {
+                None => None,
+                Some(l) => {
+                    if let Value::Blob(val) = l {
+                        let block = Block::from_bytes(&val.to_vec()).unwrap();
+                        self.current_hash = Some(block.prev_block_hash);
+                        Some(block)
+                    } else {
+                        panic!("Wrong format")
                     }
                 }
             }
+        } else {
+            None
         }
     }
 }

@@ -74,7 +74,8 @@ impl Wallet {
 
         payload_bytes.copy_from_slice(&payload_vec);
 
-        let private_key = SecretKey::from_slice(&payload_bytes).expect("32 bytes, within curve order");
+        let private_key =
+            SecretKey::from_slice(&payload_bytes).expect("32 bytes, within curve order");
         let public_key = PublicKey::from_secret_key(&secp, &private_key);
         Self {
             private_key: private_key.to_string(),
@@ -136,7 +137,7 @@ pub fn address_to_pub_hash(address: String) -> KeyHash {
 
 #[derive(Serialize, Deserialize)]
 pub struct Wallets {
-    pub  wallets: HashMap<String, Wallet>,
+    pub wallets: HashMap<String, Wallet>,
 }
 
 impl Wallets {
@@ -159,8 +160,8 @@ impl Wallets {
                 }
                 None => Self {
                     wallets: Default::default(),
-                }
-            }
+                },
+            },
             Err(e) => {
                 panic!("{}", e);
             }
@@ -172,7 +173,9 @@ impl Wallets {
         let env = store.rkv();
         let single_store = store.single_store();
         let mut writer = env.write().unwrap();
-        single_store.put(&mut writer, "wallets", &Value::Blob(&self.serialize())).unwrap();
+        single_store
+            .put(&mut writer, "wallets", &Value::Blob(&self.serialize()))
+            .unwrap();
         writer.commit().unwrap()
     }
     pub fn serialize(&self) -> Vec<u8> {

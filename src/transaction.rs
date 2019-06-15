@@ -7,8 +7,8 @@ use bincode::Error;
 use crypto::digest::Digest;
 use crypto::sha2::Sha256;
 use rustc_serialize::hex::ToHex;
-use secp256k1::{Message, Secp256k1, SecretKey, SerializedSignature, Signature, SignOnly};
 use secp256k1::PublicKey;
+use secp256k1::{Message, Secp256k1, SecretKey, SerializedSignature, SignOnly, Signature};
 
 use crate::block::Sha256Hash;
 use crate::wallet::{address_to_pub_hash, hash_pub_key, KeyHash, PubKeyBytes};
@@ -16,11 +16,10 @@ use crate::wallet::{address_to_pub_hash, hash_pub_key, KeyHash, PubKeyBytes};
 const SUBSIDY: u64 = 5000;
 
 big_array! {
-        BigArray;
-        33,
-        64,
-    }
-
+    BigArray;
+    33,
+    64,
+}
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct Transaction {
@@ -28,7 +27,6 @@ pub struct Transaction {
     pub vin: Vec<RefCell<TXInput>>,
     pub vout: Vec<TXOutput>,
 }
-
 
 impl Transaction {
     pub fn new_coinbase_tx(to: &String, data: String) -> Self {
@@ -42,10 +40,7 @@ impl Transaction {
             pub_key: Some(address_to_pub_hash(to.to_string())),
             signature: [0; 64],
         };
-        let tx_out = TXOutput::new(
-            SUBSIDY,
-            to,
-        );
+        let tx_out = TXOutput::new(SUBSIDY, to);
         let mut tx = Self {
             id: Sha256Hash::default(),
             vin: vec![RefCell::new(tx_in)],
@@ -66,9 +61,7 @@ impl Transaction {
     fn hash(&self) -> Sha256Hash {
         let enc = match bincode::serialize(self) {
             Ok(enc_dat) => enc_dat,
-            Err(e) => {
-                panic!("{}", e)
-            }
+            Err(e) => panic!("{}", e),
         };
         let mut hasher = Sha256::new();
         hasher.input(&enc);
@@ -78,10 +71,16 @@ impl Transaction {
     }
 
     pub fn is_coinbase(&self) -> bool {
-        self.vin.len() == 1 && self.vin[0].borrow().tx_id == Sha256Hash::default() && self.vin[0].borrow().vout == -1
+        self.vin.len() == 1
+            && self.vin[0].borrow().tx_id == Sha256Hash::default()
+            && self.vin[0].borrow().vout == -1
     }
 
-    pub fn sign(&self, private_key: &SecretKey, prev_txs: HashMap<String, Transaction>) -> Option<Transaction> {
+    pub fn sign(
+        &self,
+        private_key: &SecretKey,
+        prev_txs: HashMap<String, Transaction>,
+    ) -> Option<Transaction> {
         if self.is_coinbase() {
             return None;
         }
@@ -98,8 +97,9 @@ impl Transaction {
             tx_copy.id = tx_copy.hash();
             let mut vin = tx_copy.vin[id].borrow_mut();
             let sign = Secp256k1::signing_only();
-            vin.signature = sign.sign(&Message::from_slice(&tx_copy.id).unwrap(),
-                                      &private_key).serialize_compact();
+            vin.signature = sign
+                .sign(&Message::from_slice(&tx_copy.id).unwrap(), &private_key)
+                .serialize_compact();
         }
         Some(tx_copy)
     }
@@ -113,19 +113,18 @@ impl Transaction {
                 let mut vin_copy = tx_copy.vin[id].borrow_mut();
                 let prev_tx = &prev_txs[&borrow_vin.tx_id.to_hex()];
 
-
                 vin_copy.signature = [0; 64];
                 vin_copy.pub_key = Some(prev_tx.vout[borrow_vin.vout as usize].pub_key_hash);
             }
             tx_copy.id = tx_copy.hash();
             let sign = Secp256k1::verification_only();
             return true;
-//            if sign.verify(&Message::from_slice(&tx_copy.id).unwrap(),
-//                           &Signature::from_compact(&borrow_vin.signature).unwrap(),
-//                           &PublicKey::from_slice(&borrow_vin.pub_key.unwrap()).unwrap()).is_err()
-//            {
-//                return false;
-//            }
+            //            if sign.verify(&Message::from_slice(&tx_copy.id).unwrap(),
+            //                           &Signature::from_compact(&borrow_vin.signature).unwrap(),
+            //                           &PublicKey::from_slice(&borrow_vin.pub_key.unwrap()).unwrap()).is_err()
+            //            {
+            //                return false;
+            //            }
         }
         true
     }
@@ -194,5 +193,5 @@ impl TXOutput {
 
 #[derive(Debug)]
 pub enum TransactionError {
-    NotEnoughMoney
+    NotEnoughMoney,
 }

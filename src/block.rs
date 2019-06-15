@@ -4,13 +4,14 @@ use std::fmt;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use bincode::Error;
+use crypto::digest::Digest;
+use crypto::sha2::Sha256;
+use rustc_serialize::hex::ToHex;
 
+use crate::merkel_tree::MerkelTree;
 use crate::mining_error::MiningError;
 use crate::proof_of_work::{convert_u64_to_u8_array, ProofOfWork, TARGET_BITS};
 use crate::transaction::Transaction;
-use crypto::sha2::Sha256;
-use crypto::digest::Digest;
-use rustc_serialize::hex::ToHex;
 
 const HASH_BYTE_SIZE: usize = 32;
 
@@ -45,15 +46,12 @@ impl Block {
         Ok(block)
     }
     fn hash_transactions(&self) -> Sha256Hash {
-        let mut tx_hashes= Vec::new();
+        let mut tx_hashes = Vec::new();
         for tx in &self.transactions {
-            tx_hashes.extend(&tx.id);
+            tx_hashes.push(tx.id.to_vec());
         }
-        let mut hasher = Sha256::new();
-        hasher.input(&tx_hashes);
-        let mut hash = Sha256Hash::default();
-        hasher.result(&mut hash);
-        hash
+        let tree = MerkelTree::new(tx_hashes);
+        *tree.root_node.hash()
     }
     pub(crate) fn headers(&self) -> Vec<u8> {
         let mut vec = Vec::new();

@@ -11,4 +11,6 @@ mod mining_error;
 mod proof_of_work;
 mod store;
 mod utxo;
+mod merkel_tree;
+mod script_lang;
 pub mod transaction;

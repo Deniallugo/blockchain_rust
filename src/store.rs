@@ -17,7 +17,11 @@ impl Store {
 
         Self {
             name,
-            created_arc: Manager::singleton().write().unwrap().get_or_create(path, Rkv::new).unwrap(),
+            created_arc: Manager::singleton()
+                .write()
+                .unwrap()
+                .get_or_create(path, Rkv::new)
+                .unwrap(),
         }
     }
 
@@ -27,7 +31,7 @@ impl Store {
 
     pub(crate) fn single_store(&self) -> SingleStore {
         let rkv = self.rkv();
-        rkv.open_single(self.name.as_str(), StoreOptions::create()).unwrap()
+        rkv.open_single(self.name.as_str(), StoreOptions::create())
+            .unwrap()
     }
 }
-

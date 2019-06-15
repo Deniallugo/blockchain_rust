@@ -10,7 +10,7 @@ use crate::transaction::TXOutput;
 use crate::wallet::KeyHash;
 
 struct UTXOSet<'a> {
-    blockchain: &'a mut Blockchain
+    blockchain: &'a mut Blockchain,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -32,11 +32,15 @@ impl<'a> UTXOSet<'a> {
         let store = env.open_single(UTXOBUCKET, StoreOptions::create()).unwrap();
         let mut writer = env.write().unwrap();
         store.clear(&mut writer).unwrap();
-//        utxo = self.find_utxo()
-//        store.delete(writer, UTXOBUCKET)
+        //        utxo = self.find_utxo()
+        //        store.delete(writer, UTXOBUCKET)
     }
 
-    fn find_spendable_outputs(&self, pub_key_hash: KeyHash, amount: u64) -> (u64, HashMap<String, Vec<usize>>) {
+    fn find_spendable_outputs(
+        &self,
+        pub_key_hash: KeyHash,
+        amount: u64,
+    ) -> (u64, HashMap<String, Vec<usize>>) {
         let mut unspent_outputs: HashMap<String, Vec<usize>> = Default::default();
 
         let mut accumulated: u64 = 0;
@@ -51,9 +55,9 @@ impl<'a> UTXOSet<'a> {
             for (out_idx, out) in outs.iter().enumerate() {
                 if out.is_locker_with_key(&pub_key_hash) && accumulated < amount {
                     accumulated += out.value;
-                    let mut unspent_out_in_tx = unspent_outputs.entry(
-                        tx_hex.clone()
-                    ).or_insert(Default::default());
+                    let mut unspent_out_in_tx = unspent_outputs
+                        .entry(tx_hex.clone())
+                        .or_insert(Default::default());
 
                     (*unspent_out_in_tx).push(out_idx);
                 }

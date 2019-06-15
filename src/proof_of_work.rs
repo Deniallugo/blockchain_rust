@@ -53,7 +53,6 @@ impl<'a> ProofOfWork<'a> {
     }
 }
 
-
 pub fn convert_u64_to_u8_array(val: u64) -> [u8; 8] {
     return [
         val as u8,
@@ -66,4 +65,3 @@ pub fn convert_u64_to_u8_array(val: u64) -> [u8; 8] {
         (val >> 56) as u8,
     ];
 }
-
