@@ -21,12 +21,15 @@ use serde::ser::Serialize;
 use crate::block::Sha256Hash;
 use crate::store::Store;
 
+use self::secp256k1::Message;
+
 static VERSION: u8 = 0;
 
 pub type KeyHash = [u8; 20];
 
 pub type PubKeyBytes = [u8; 33];
 pub type SecKeyBytes = [u8; 32];
+pub type SignatureBytes = [u8; 64];
 
 big_array! {
     BigArray;
@@ -37,7 +40,6 @@ big_array! {
 #[derive(Serialize, Deserialize)]
 pub struct Wallet {
     private_key: String,
-    // TODO change to array
     #[serde(with = "BigArray")]
     pub public_key: PubKeyBytes,
 }
@@ -96,6 +98,11 @@ impl Wallet {
     pub fn private_key(&self) -> SecretKey {
         SecretKey::from_str(&self.private_key).unwrap()
     }
+    pub fn sign(&self, data: Vec<u8>) -> SignatureBytes {
+        let sign = Secp256k1::signing_only();
+        sign.sign(&Message::from_slice(&data).unwrap(), &self.private_key())
+            .serialize_compact()
+    }
 }
 
 pub fn hash_pub_key(key: &PubKeyBytes) -> KeyHash {
@@ -129,7 +136,9 @@ fn checksum(payload: &Vec<u8>) -> [u8; 4] {
 }
 
 pub fn address_to_pub_hash(address: &String) -> KeyHash {
-    let pub_key_hash = bs58::decode(address.clone().into_bytes()).into_vec().unwrap();
+    let pub_key_hash = bs58::decode(address.clone().into_bytes())
+        .into_vec()
+        .unwrap();
     let mut pub_key_bytes: KeyHash = [0; 20];
     pub_key_bytes.copy_from_slice(&pub_key_hash[1..pub_key_hash.len() - 4]);
     pub_key_bytes

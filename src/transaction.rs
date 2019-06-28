@@ -7,11 +7,11 @@ use bincode::Error;
 use crypto::digest::Digest;
 use crypto::sha2::Sha256;
 use rustc_serialize::hex::ToHex;
+use secp256k1::{Message, Secp256k1, SecretKey, SerializedSignature, Signature, SignOnly};
 use secp256k1::PublicKey;
-use secp256k1::{Message, Secp256k1, SecretKey, SerializedSignature, SignOnly, Signature};
 
 use crate::block::Sha256Hash;
-use crate::script_lang::{ScriptPubKey, ScriptSig, ScriptToken, StackValues};
+use crate::script_lang::{pay_to_address_script, ScriptPubKey, ScriptSig, ScriptToken, StackValues};
 use crate::wallet::{address_to_pub_hash, hash_pub_key, KeyHash, PubKeyBytes};
 
 const SUBSIDY: u64 = 5000;
@@ -202,16 +202,6 @@ impl TXOutput {
     }
 }
 
-fn pay_to_address_script(address: &String) -> ScriptPubKey {
-    let pub_key_hash = address_to_pub_hash(address);
-    ScriptPubKey {
-        script: vec![
-            ScriptToken::OpDup,
-            ScriptToken::OpHash160,
-            ScriptToken::Value(StackValues::PubKeyHash(pub_key_hash)),
-        ],
-    }
-}
 
 #[derive(Debug)]
 pub enum TransactionError {

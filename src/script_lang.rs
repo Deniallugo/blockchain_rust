@@ -8,7 +8,7 @@ use std::error::Error;
 use secp256k1::{Message, PublicKey, Secp256k1, Signature, Verification};
 
 use crate::block::Sha256Hash;
-use crate::wallet::{hash_pub_key, KeyHash, PubKeyBytes};
+use crate::wallet::{address_to_pub_hash, hash_pub_key, KeyHash, PubKeyBytes};
 
 big_array! {
     BigArray;
@@ -84,15 +84,15 @@ impl ScriptPubKey {
     }
     fn verify(
         &self,
-        script_sig: Option<ScriptSig>,
-        tx_in_hash: Option<Sha256Hash>,
+        script_sig: Option<&ScriptSig>,
+        tx_in_hash: Option<&Sha256Hash>,
     ) -> Result<bool, ScriptError> {
         use ScriptToken::*;
         let mut stack: Vec<StackValues>;
         if let Some(sig) = script_sig {
             stack = vec![
-                StackValues::Signature(sig.signature),
-                StackValues::PubKey(sig.pub_key),
+                StackValues::Signature(sig.signature.clone()),
+                StackValues::PubKey(sig.pub_key.clone()),
             ];
         } else {
             stack = vec![]
@@ -162,7 +162,7 @@ impl ScriptPubKey {
                     ) = (first_value, second_value)
                     {
                         if let Some(tx_hash) = tx_in_hash {
-                            return_result = Ok(verify(&tx_hash, &pub_key, &sign))
+                            return_result = Ok(verify(tx_hash, &pub_key, &sign))
                         } else {
                             return_result = Err(ScriptError::WrongValue);
                         }
@@ -177,6 +177,19 @@ impl ScriptPubKey {
         } else {
             return Err(ScriptError::WrongValue);
         }
+    }
+}
+
+pub fn pay_to_address_script(address: &String) -> ScriptPubKey {
+    let pub_key_hash = address_to_pub_hash(address);
+    ScriptPubKey {
+        script: vec![
+            ScriptToken::OpDup,
+            ScriptToken::OpHash160,
+            ScriptToken::Value(StackValues::PubKeyHash(pub_key_hash)),
+            ScriptToken::OpEqualVerify,
+            ScriptToken::OpCheckSig,
+        ],
     }
 }
 
@@ -197,13 +210,15 @@ mod tests {
     use secp256k1::Secp256k1;
     use secp256k1::VerifyOnly;
 
-    use crate::script_lang::{ScriptToken, StackValues};
+    use ScriptToken::*;
 
-    use super::ScriptPubKey;
+    use crate::script_lang::{pay_to_address_script, ScriptToken, StackValues};
+    use crate::wallet::Wallet;
+
+    use super::{ScriptPubKey, ScriptSig};
 
     #[test]
     fn check_add() {
-        use ScriptToken::*;
         let mut script = ScriptPubKey::new();
         script.add(Value(StackValues::Value(1)));
         script.add(Value(StackValues::Value(2)));
@@ -213,5 +228,18 @@ mod tests {
         assert_eq!(script.verify(None, None).unwrap(), true)
     }
 
-    fn verify() {}
+    #[test]
+    fn verify() {
+        use ScriptToken::*;
+        let wallet = Wallet::new();
+        let mut script = pay_to_address_script(&wallet.get_address());
+        let data = [1; 32];
+        let script_sig = ScriptSig {
+            pub_key: wallet.public_key,
+            signature: wallet.sign(data.to_vec()),
+        };
+        if let Ok(result) = script.verify(Some(&script_sig), Some(&data)) {
+            assert_eq!(result, true)
+        } else { panic!("fuck") }
+    }
 }
