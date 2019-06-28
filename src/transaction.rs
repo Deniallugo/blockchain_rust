@@ -11,6 +11,7 @@ use secp256k1::PublicKey;
 use secp256k1::{Message, Secp256k1, SecretKey, SerializedSignature, SignOnly, Signature};
 
 use crate::block::Sha256Hash;
+use crate::script_lang::{ScriptPubKey, ScriptSig, ScriptToken, StackValues};
 use crate::wallet::{address_to_pub_hash, hash_pub_key, KeyHash, PubKeyBytes};
 
 const SUBSIDY: u64 = 5000;
@@ -31,14 +32,16 @@ pub struct Transaction {
 impl Transaction {
     pub fn new_coinbase_tx(to: &String, data: String) -> Self {
         let mut data = data;
-        if data == "" {
+        if data == "".to_owned() {
             data = format!("Reward to {}", to)
         };
         let tx_in = TXInput {
             tx_id: Sha256Hash::default(),
             vout: -1,
-            pub_key: Some(address_to_pub_hash(to.to_string())),
-            signature: [0; 64],
+            script_sig: ScriptSig {
+                pub_key: [0; 33],
+                signature: [0; 64],
+            },
         };
         let tx_out = TXOutput::new(SUBSIDY, to);
         let mut tx = Self {
@@ -84,74 +87,79 @@ impl Transaction {
         if self.is_coinbase() {
             return None;
         }
-
-        let mut tx_copy = self.trimmed_copy();
-
-        for id in 0..tx_copy.vin.len() {
-            {
-                let mut vin = tx_copy.vin[id].borrow_mut();
-                let prev_tx = &prev_txs[&vin.tx_id.to_hex()];
-                vin.signature = [0; 64];
-                vin.pub_key = Some(prev_tx.vout[vin.vout as usize].pub_key_hash);
-            }
-            tx_copy.id = tx_copy.hash();
-            let mut vin = tx_copy.vin[id].borrow_mut();
-            let sign = Secp256k1::signing_only();
-            vin.signature = sign
-                .sign(&Message::from_slice(&tx_copy.id).unwrap(), &private_key)
-                .serialize_compact();
-        }
-        Some(tx_copy)
+        None
+        //        let mut tx_copy = self.trimmed_copy();
+        //
+        //        for id in 0..tx_copy.vin.len() {
+        //            {
+        //                let mut vin = tx_copy.vin[id].borrow_mut();
+        //                let prev_tx = &prev_txs[&vin.tx_id.to_hex()];
+        //                vin.signature = [0; 64];
+        //                vin.pub_key = Some(prev_tx.vout[vin.vout as usize].pub_key_hash);
+        //            }
+        //            tx_copy.id = tx_copy.hash();
+        //            let mut vin = tx_copy.vin[id].borrow_mut();
+        //            let sign = Secp256k1::signing_only();
+        //            vin.signature = sign
+        //                .sign(&Message::from_slice(&tx_copy.id).unwrap(), &private_key)
+        //                .serialize_compact();
+        //        }
+        //        Some(tx_copy)
     }
 
     pub fn verify(&self, prev_txs: HashMap<String, Transaction>) -> bool {
-        let mut tx_copy = self.trimmed_copy();
+        //        FIXME
 
-        for (id, vin) in self.vin.iter().enumerate() {
-            let borrow_vin = vin.borrow();
-            {
-                let mut vin_copy = tx_copy.vin[id].borrow_mut();
-                let prev_tx = &prev_txs[&borrow_vin.tx_id.to_hex()];
-
-                vin_copy.signature = [0; 64];
-                vin_copy.pub_key = Some(prev_tx.vout[borrow_vin.vout as usize].pub_key_hash);
-            }
-            tx_copy.id = tx_copy.hash();
-            let sign = Secp256k1::verification_only();
-            return true;
-            //            if sign.verify(&Message::from_slice(&tx_copy.id).unwrap(),
-            //                           &Signature::from_compact(&borrow_vin.signature).unwrap(),
-            //                           &PublicKey::from_slice(&borrow_vin.pub_key.unwrap()).unwrap()).is_err()
-            //            {
-            //                return false;
-            //            }
-        }
+        //        let mut tx_copy = self.trimmed_copy();
+        //
+        //        for (id, vin) in self.vin.iter().enumerate() {
+        //            let borrow_vin = vin.borrow();
+        //            {
+        //                let mut vin_copy = tx_copy.vin[id].borrow_mut();
+        //                let prev_tx = &prev_txs[&borrow_vin.tx_id.to_hex()];
+        //
+        //                vin_copy.signature = [0; 64];
+        //                vin_copy.pub_key = Some(prev_tx.vout[borrow_vin.vout as usize].pub_key_hash);
+        //            }
+        //            tx_copy.id = tx_copy.hash();
+        //            let sign = Secp256k1::verification_only();
+        //            return true;
+        //            //            if sign.verify(&Message::from_slice(&tx_copy.id).unwrap(),
+        //            //                           &Signature::from_compact(&borrow_vin.signature).unwrap(),
+        //            //                           &PublicKey::from_slice(&borrow_vin.pub_key.unwrap()).unwrap()).is_err()
+        //            //            {
+        //            //                return false;
+        //            //            }
+        //        }
         true
     }
+    //        FIXME
 
-    fn trimmed_copy(&self) -> Self {
-        let mut inputs: Vec<RefCell<TXInput>> = Default::default();
-        let mut outputs: Vec<TXOutput> = Default::default();
-        for vin in self.vin.iter() {
-            inputs.push(RefCell::new(TXInput {
-                tx_id: vin.borrow().tx_id,
-                vout: vin.borrow().vout.clone(),
-                pub_key: None,
-                signature: [0; 64],
-            }))
-        }
-        for vout in self.vout.iter() {
-            outputs.push(TXOutput {
-                value: vout.value,
-                pub_key_hash: vout.pub_key_hash,
-            })
-        }
-        Self {
-            id: self.id,
-            vin: inputs,
-            vout: outputs,
-        }
-    }
+    //    fn trimmed_copy(&self) -> Self {
+    //        let mut inputs: Vec<RefCell<TXInput>> = Default::default();
+    //        let mut outputs: Vec<TXOutput> = Default::default();
+    //        for vin in self.vin.iter() {
+    //            inputs.push(RefCell::new(TXInput {
+    //                tx_id: vin.borrow().tx_id,
+    //                vout: vin.borrow().vout.clone(),
+    //                script_sig: ScriptSig {
+    //                    pub_key: None,
+    //                    signature: [0; 64],
+    //                },
+    //            }))
+    //        }
+    //        for vout in self.vout.iter() {
+    //            outputs.push(TXOutput {
+    //                value: vout.value,
+    //                pub_key_hash: vout.pub_key_hash,
+    //            })
+    //        }
+    //        Self {
+    //            id: self.id,
+    //            vin: inputs,
+    //            vout: outputs,
+    //        }
+    //    }
 
     pub fn from_bytes(bytes: &Vec<u8>) -> Result<Self, Error> {
         bincode::deserialize(bytes)
@@ -162,32 +170,46 @@ impl Transaction {
 pub struct TXInput {
     pub tx_id: Sha256Hash,
     pub vout: i64,
-    #[serde(with = "BigArray")]
-    pub signature: [u8; 64],
-    pub pub_key: Option<KeyHash>,
+    pub script_sig: ScriptSig,
 }
 
 impl TXInput {
     pub fn uses_key(&self, pub_key_hash: &KeyHash) -> bool {
-        self.pub_key == Some(*pub_key_hash)
+        false
+        //        FIXME
+
+        //        self.pub_key == *pub_key_hash
     }
 }
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct TXOutput {
     pub value: u64,
-    pub pub_key_hash: KeyHash,
+    pub script_pub_key: ScriptPubKey,
 }
 
 impl TXOutput {
     pub fn new(value: u64, address: &String) -> Self {
         Self {
             value,
-            pub_key_hash: address_to_pub_hash(address.to_string()),
+            script_pub_key: pay_to_address_script(address),
         }
     }
     pub fn is_locker_with_key(&self, pub_key_hash: &KeyHash) -> bool {
-        self.pub_key_hash == *pub_key_hash
+        false
+        //        FIXME
+        //        self.pub_key_hash == *pub_key_hash
+    }
+}
+
+fn pay_to_address_script(address: &String) -> ScriptPubKey {
+    let pub_key_hash = address_to_pub_hash(address);
+    ScriptPubKey {
+        script: vec![
+            ScriptToken::OpDup,
+            ScriptToken::OpHash160,
+            ScriptToken::Value(StackValues::PubKeyHash(pub_key_hash)),
+        ],
     }
 }
 

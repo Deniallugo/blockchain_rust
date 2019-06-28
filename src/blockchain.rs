@@ -8,6 +8,7 @@ use secp256k1::SecretKey;
 
 use crate::block::{Block, Sha256Hash};
 use crate::mining_error::MiningError;
+use crate::script_lang::ScriptSig;
 use crate::store::Store;
 use crate::transaction::{Transaction, TransactionError, TXInput, TXOutput};
 use crate::wallet::{address_to_pub_hash, hash_pub_key, KeyHash, Wallet, Wallets};
@@ -188,7 +189,7 @@ impl Blockchain {
         outs
     }
     pub fn get_balance(self, address: &String) -> u64 {
-        let pub_key_hash = &address_to_pub_hash(address.to_owned());
+        let pub_key_hash = &address_to_pub_hash(address);
         let mut balance = 0;
         let outs = self.find_outs(&pub_key_hash);
         for out in outs {
@@ -205,7 +206,6 @@ impl Blockchain {
         let mut inputs: Vec<RefCell<TXInput>> = vec![];
         let mut outputs: Vec<TXOutput> = vec![];
         let (acc, valid_outs) = self.find_spendable_outs(from.clone(), amount);
-        let pub_key = hash_pub_key(&from.public_key);
         if acc < amount {
             return Err(TransactionError::NotEnoughMoney);
         }
@@ -214,14 +214,15 @@ impl Blockchain {
             let mut tx_id = Sha256Hash::default();
 
             tx_id.copy_from_slice(&tx_id_hex.from_hex().unwrap()[..]);
-            let mut pub_key_in = [0; 20];
-            pub_key_in.copy_from_slice(&pub_key);
+
             for out in outs {
                 let input = TXInput {
                     tx_id,
                     vout: *out,
-                    pub_key: Some(pub_key_in),
-                    signature: [0; 64],
+                    script_sig: ScriptSig {
+                        pub_key: from.public_key.clone(),
+                        signature: [0; 64],
+                    },
                 };
                 inputs.push(RefCell::new(input));
             }

@@ -128,8 +128,8 @@ fn checksum(payload: &Vec<u8>) -> [u8; 4] {
     checksum_hash
 }
 
-pub fn address_to_pub_hash(address: String) -> KeyHash {
-    let pub_key_hash = bs58::decode(&address.into_bytes()).into_vec().unwrap();
+pub fn address_to_pub_hash(address: &String) -> KeyHash {
+    let pub_key_hash = bs58::decode(address.clone().into_bytes()).into_vec().unwrap();
     let mut pub_key_bytes: KeyHash = [0; 20];
     pub_key_bytes.copy_from_slice(&pub_key_hash[1..pub_key_hash.len() - 4]);
     pub_key_bytes

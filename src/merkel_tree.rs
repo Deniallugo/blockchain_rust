@@ -99,4 +99,25 @@ impl MerkelTree {
             height,
         }
     }
+
+    fn validate(&self, hash: Vec<u8>, position: u32) {
+
+    }
+}
+
+mod tests {
+    use crate::merkel_tree::MerkelTree;
+
+    #[test]
+    fn create_merkel_tree() {
+        let mut transactions = Vec::new();
+        let count = 5;
+        for _ in 0..count {
+            let tx = vec![0, 1, 2, 3];
+            transactions.push(tx)
+        }
+        let a = MerkelTree::new(transactions);
+        assert_eq!(a.height, 3);
+        assert_eq!(a.count, count);
+    }
 }
