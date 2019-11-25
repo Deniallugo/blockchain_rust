@@ -2,16 +2,16 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 
 use rkv::Value;
-use rkv::value::Type::Str;
+
 use rustc_serialize::hex::{FromHex, ToHex};
-use secp256k1::SecretKey;
+use secp256k1::{SecretKey};
 
 use crate::block::{Block, Sha256Hash};
 use crate::mining_error::MiningError;
 use crate::script_lang::ScriptSig;
 use crate::store::Store;
 use crate::transaction::{Transaction, TransactionError, TXInput, TXOutput};
-use crate::wallet::{address_to_pub_hash, hash_pub_key, KeyHash, Wallet, Wallets};
+use crate::wallet::{address_to_pub_hash, hash_pub_key, KeyHash, PubKeyBytes, Wallet, Wallets};
 
 pub struct Blockchain {
     tip: Option<Sha256Hash>,
@@ -22,14 +22,14 @@ pub struct Blockchain {
 impl Blockchain {
     pub fn new(
         path_str: String,
-        mut wallets: &mut Wallets,
+        wallets: &mut Wallets,
     ) -> Result<(Blockchain, Option<String>), MiningError> {
         let store = Store::new(&path_str, "block".to_owned());
         let env = store.rkv();
         let single_store = store.single_store();
         let reader = env.read().unwrap();
         let mut address: Option<String> = None;
-        let mut gen_block;
+        let gen_block;
         let tip = match single_store.get(&reader, "l") {
             Ok(l_opt) => match l_opt {
                 Some(l) => {
@@ -42,7 +42,7 @@ impl Blockchain {
                     }
                 }
                 None => {
-                    let mut wallet = wallets.create_wallet();
+                    let wallet = wallets.create_wallet();
                     let wallet_address = wallet.get_address();
                     let coinbase_transaction =
                         Transaction::new_coinbase_tx(&wallet_address, "genesis block".to_string());
@@ -89,7 +89,7 @@ impl Blockchain {
                 self.find_transaction(&borrow_vin.tx_id),
             );
         }
-        tx.verify(prev_txs)
+        tx.verify(&prev_txs)
     }
     pub fn find_transaction(&self, tx_id: &Sha256Hash) -> Transaction {
         for block in self.iter() {
@@ -102,7 +102,7 @@ impl Blockchain {
         panic!("No transacton for id {}", tx_id.to_hex())
     }
     pub fn mine_block(&mut self, transactions: Vec<Transaction>) -> Result<(), MiningError> {
-        let mut block: Block;
+        let block: Block;
 
         let rkv = self.store.rkv();
         let single_store = self.store.single_store();
@@ -132,8 +132,9 @@ impl Blockchain {
         self.tip = Some(block.hash);
         Ok(())
     }
-    pub fn find_unspent_transactions(&self, pub_key_hash: &KeyHash) -> Vec<Transaction> {
+    pub fn find_unspent_transactions(&self, pub_key: &PubKeyBytes) -> Vec<Transaction> {
         let mut unspent_txs: Vec<Transaction> = vec![];
+        let pub_key_hash = hash_pub_key(pub_key);
         let mut spent_txs: HashMap<String, Vec<i64>> = HashMap::new();
         for block in self.iter() {
             for tx in block.transactions {
@@ -150,13 +151,13 @@ impl Blockchain {
                         None => (),
                     }
 
-                    if out.is_locker_with_key(pub_key_hash) {
+                    if out.is_locker_with_key(&pub_key_hash) {
                         unspent_txs.push(tx.clone()) // Ask about it, can i save it better?
                     }
                     if !tx.is_coinbase() {
                         for vin in &tx.vin {
                             let ref_vin = vin.borrow();
-                            if ref_vin.uses_key(pub_key_hash) {
+                            if ref_vin.uses_key(pub_key) {
                                 let in_tx_id = ref_vin.tx_id.to_hex();
 
                                 match spent_txs.get_mut(&in_tx_id) {
@@ -176,16 +177,17 @@ impl Blockchain {
         }
         unspent_txs
     }
-    pub fn find_outs(self, pub_key_hash: &KeyHash) -> Vec<TXOutput> {
-        let mut outs: Vec<TXOutput> = vec![];
-        let unspent_txs = self.find_unspent_transactions(pub_key_hash);
-        for tx in unspent_txs {
-            for out in tx.vout {
-                if out.is_locker_with_key(pub_key_hash) {
-                    outs.push(out)
-                }
-            }
-        }
+    pub fn find_outs(self, _pub_key_hash: &KeyHash) -> Vec<TXOutput> {
+        let outs: Vec<TXOutput> = vec![];
+//        TODO implement balance
+//        let unspent_txs = self.find_unspent_transactions(pub_key_hash);
+//        for tx in unspent_txs {
+//            for out in tx.vout {
+//                if out.is_locker_with_key(pub_key_hash) {
+//                    outs.push(out)
+//                }
+//            }
+//        }
         outs
     }
     pub fn get_balance(self, address: &String) -> u64 {
@@ -232,7 +234,7 @@ impl Blockchain {
         if acc > amount {
             outputs.push(TXOutput::new(amount, &from.get_address()));
         }
-        let mut tx = Transaction::new(inputs, outputs);
+        let tx = Transaction::new(inputs, outputs);
         Ok(self.sign_transaction(&tx, &from.private_key()))
     }
     fn sign_transaction(&self, tx: &Transaction, priv_key: &SecretKey) -> Transaction {
@@ -244,11 +246,11 @@ impl Blockchain {
                 self.find_transaction(&borrow_vin.tx_id),
             );
         }
-        tx.sign(priv_key, prev_txs).unwrap()
+        tx.sign(priv_key, &prev_txs).unwrap()
     }
     fn find_spendable_outs(&self, from: &Wallet, amount: u64) -> (u64, HashMap<String, Vec<i64>>) {
+        let unspent_txs = self.find_unspent_transactions(&from.public_key);
         let pub_key_hash = hash_pub_key(&from.public_key);
-        let unspent_txs = self.find_unspent_transactions(&pub_key_hash);
         let mut unspent_outs: HashMap<String, Vec<i64>> = HashMap::new();
         let mut acc = 0;
 

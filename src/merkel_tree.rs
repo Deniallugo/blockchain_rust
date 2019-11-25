@@ -4,7 +4,7 @@ use crypto::digest::Digest;
 use crypto::sha2::Sha256;
 
 use crate::block::Sha256Hash;
-use crate::transaction::Transaction;
+
 
 pub(crate) struct MerkelTree {
     pub(crate) root_node: MerkelNode,
@@ -62,7 +62,7 @@ impl MerkelNode {
 }
 
 impl MerkelTree {
-    pub fn new(mut transactions: Vec<Vec<u8>>) -> MerkelTree {
+    pub fn new(transactions: Vec<Vec<u8>>) -> MerkelTree {
         if transactions.is_empty() {
             return MerkelTree {
                 root_node: MerkelNode::empty(Sha256Hash::default()),
@@ -100,13 +100,13 @@ impl MerkelTree {
         }
     }
 
-    fn validate(&self, hash: Vec<u8>, position: u32) {
+    fn validate(&self, _hash: Vec<u8>, _position: u32) {
 
     }
 }
 
 mod tests {
-    use crate::merkel_tree::MerkelTree;
+    
 
     #[test]
     fn create_merkel_tree() {

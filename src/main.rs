@@ -1,12 +1,12 @@
 extern crate structopt;
 
-use std::collections::HashMap;
+
 
 use structopt::StructOpt;
 
 use blockchain::blockchain::Blockchain;
 use blockchain::transaction::Transaction;
-use blockchain::wallet::{Wallet, Wallets};
+use blockchain::wallet::{Wallets};
 
 #[derive(StructOpt)]
 struct Send {

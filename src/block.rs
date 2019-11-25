@@ -4,8 +4,8 @@ use std::fmt;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use bincode::Error;
-use crypto::digest::Digest;
-use crypto::sha2::Sha256;
+
+
 use rustc_serialize::hex::ToHex;
 
 use crate::merkel_tree::MerkelTree;

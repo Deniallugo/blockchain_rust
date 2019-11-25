@@ -16,7 +16,6 @@ use ripemd160::{Digest, Ripemd160};
 use rkv::Value;
 use secp256k1::key::{PublicKey, SecretKey};
 use secp256k1::Secp256k1;
-use serde::ser::Serialize;
 
 use crate::block::Sha256Hash;
 use crate::store::Store;
@@ -61,7 +60,7 @@ impl Wallet {
         }
     }
     pub fn from_str(payload: String) -> Self {
-        let secp = Secp256k1::new();
+        let _secp = Secp256k1::new();
         const size_of_bytes: usize = 32;
         let mut payload_bytes: [u8; size_of_bytes] = Default::default();
         let mut payload_vec = payload.into_bytes();
@@ -78,10 +77,9 @@ impl Wallet {
 
         let private_key =
             SecretKey::from_slice(&payload_bytes).expect("32 bytes, within curve order");
-        let public_key = PublicKey::from_secret_key(&secp, &private_key);
         Self {
             private_key: private_key.to_string(),
-            public_key: public_key.serialize(),
+            public_key: private_key_to_public(&private_key),
         }
     }
 
@@ -103,6 +101,11 @@ impl Wallet {
         sign.sign(&Message::from_slice(&data).unwrap(), &self.private_key())
             .serialize_compact()
     }
+}
+
+pub fn private_key_to_public(key: &SecretKey) -> PubKeyBytes {
+    let secp = Secp256k1::new();
+    PublicKey::from_secret_key(&secp, key).serialize()
 }
 
 pub fn hash_pub_key(key: &PubKeyBytes) -> KeyHash {
@@ -238,10 +241,10 @@ mod tests {
     #[test]
     fn wallets_create() {
         let mut wallets = Wallets::new("wallets".to_string());
-        let wallet = wallets.create_wallet();
+        let _wallet = wallets.create_wallet();
         wallets.save_to_file("wallets".to_string());
         let from_wallets = Wallets::new("wallets".to_string());
-        let a = wallets.wallets.len();
+        let _a = wallets.wallets.len();
         assert_eq!(wallets.wallets.len(), from_wallets.wallets.len());
         assert_ne!(wallets.wallets.len(), 0);
         println!("{}", wallets.wallets.len())

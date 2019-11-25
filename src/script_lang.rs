@@ -1,11 +1,11 @@
 extern crate serde;
 extern crate serde_big_array;
 
-use core::borrow::{Borrow, BorrowMut};
-use std::{error, fmt};
-use std::error::Error;
 
-use secp256k1::{Message, PublicKey, Secp256k1, Signature, Verification};
+use std::{error, fmt};
+
+
+use secp256k1::{Message, PublicKey, Secp256k1, Signature};
 
 use crate::block::Sha256Hash;
 use crate::wallet::{address_to_pub_hash, hash_pub_key, KeyHash, PubKeyBytes};
@@ -44,7 +44,7 @@ impl error::Error for ScriptError {
         }
     }
 
-    fn cause(&self) -> Option<&error::Error> {
+    fn cause(&self) -> Option<&dyn error::Error> {
         None
     }
 }
@@ -76,13 +76,13 @@ pub struct ScriptPubKey {
 }
 
 impl ScriptPubKey {
-    fn new() -> ScriptPubKey {
+    pub fn new() -> ScriptPubKey {
         ScriptPubKey { script: vec![] }
     }
     fn add(&mut self, value: ScriptToken) {
         self.script.push(value)
     }
-    fn verify(
+    pub fn verify(
         &self,
         script_sig: Option<&ScriptSig>,
         tx_in_hash: Option<&Sha256Hash>,
@@ -149,6 +149,7 @@ impl ScriptPubKey {
                     ) = (first_value, second_value)
                     {
                         return_result = Ok(value1 == value2);
+                        println!("{:?}", return_result)
                     } else {
                         return_result = Err(ScriptError::WrongValue);
                     }
@@ -206,9 +207,9 @@ fn verify(msg: &Sha256Hash, key: &PubKeyBytes, signature: &[u8; 64]) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use rustc_serialize::json::Stack;
-    use secp256k1::Secp256k1;
-    use secp256k1::VerifyOnly;
+    
+    
+    
 
     use ScriptToken::*;
 
@@ -230,9 +231,9 @@ mod tests {
 
     #[test]
     fn verify() {
-        use ScriptToken::*;
+        
         let wallet = Wallet::new();
-        let mut script = pay_to_address_script(&wallet.get_address());
+        let script = pay_to_address_script(&wallet.get_address());
         let data = [1; 32];
         let script_sig = ScriptSig {
             pub_key: wallet.public_key,

@@ -1,8 +1,8 @@
-use core::borrow::{Borrow, BorrowMut};
+
 use std::collections::HashMap;
 
 use bincode::Error;
-use rkv::{RoCursor, StoreOptions, Value};
+use rkv::{StoreOptions, Value};
 use rustc_serialize::hex::ToHex;
 
 use crate::blockchain::Blockchain;
@@ -55,7 +55,7 @@ impl<'a> UTXOSet<'a> {
             for (out_idx, out) in outs.iter().enumerate() {
                 if out.is_locker_with_key(&pub_key_hash) && accumulated < amount {
                     accumulated += out.value;
-                    let mut unspent_out_in_tx = unspent_outputs
+                    let unspent_out_in_tx = unspent_outputs
                         .entry(tx_hex.clone())
                         .or_insert(Default::default());
 
@@ -73,7 +73,7 @@ impl<'a> UTXOSet<'a> {
         let reader = env.read().unwrap();
 
         let mut iter = store.iter_start(&reader).unwrap();
-        while let Some(Ok((tx_id, Some(Value::Blob(tx))))) = iter.next() {
+        while let Some(Ok((_tx_id, Some(Value::Blob(tx))))) = iter.next() {
             let outs = OutsSet::from_bytes(&tx.to_vec()).unwrap().outs;
             for out in outs {
                 if out.is_locker_with_key(&pub_key_hash) {
